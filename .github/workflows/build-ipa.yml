@@ -1,0 +1,40 @@
+name: Build IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build-ipa:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ldid
+        run: |
+          if command -v ldid >/dev/null 2>&1; then
+            echo "ldid already installed: $(which ldid)"
+            exit 0
+          fi
+          if brew install ldid 2>/dev/null; then
+            exit 0
+          fi
+          git clone --depth=1 https://github.com/ProcursusTeam/ldid.git /tmp/ldid
+          cd /tmp/ldid
+          g++ -std=c++11 -o ldid ldid.cpp -I. -lcrypto
+          sudo mv ldid /usr/local/bin/
+          ldid -h || true
+
+      - name: Build and package IPA
+        run: |
+          chmod +x WiFiHistory/scripts/build-ipa.sh
+          ./WiFiHistory/scripts/build-ipa.sh
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WiFiHistory-ipa
+          path: WiFiHistory/build/WiFiHistory.ipa
+          if-no-files-found: error

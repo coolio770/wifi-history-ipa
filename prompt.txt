@@ -1,0 +1,140 @@
+WiFi History — Project Plan
+============================
+
+Goals
+-----
+
+1. Ship a sideloadable IPA named **WiFi History** that runs on **jailbroken iOS 12.x** devices (all iOS 12 jailbreaks: unc0ver, Chimera, checkra1n, etc.).
+2. Display every previously connected Wi-Fi network in **history order** (most recently connected first), showing:
+   - SSID (network name)
+   - Last connected date/time (when available)
+   - Security type (when available)
+   - **Wi-Fi password** (when keychain access succeeds)
+3. Package the final deliverable as **WiFiHistory.ipa** for installation via **ReProvision** or another jailbreak sideload/resign tool.
+4. Optional upward compatibility: same binary may work on newer jailbroken iOS versions without breaking the iOS 12 requirement.
+
+
+Constraints & assumptions
+-------------------------
+
+- This is **not** an App Store app. It depends on jailbreak filesystem/keychain access and private entitlements.
+- Wi-Fi passwords on iOS live in the **system keychain** (service `AirPort`), not in user-readable plaintext files.
+- Network metadata (SSID, last connected, security hints) lives in **com.apple.wifi.known-networks.plist**.
+- A stock sideloaded app cannot read Wi-Fi passwords; the IPA must be signed with **jailbreak entitlements** (notably `keychain-access-groups` including `apple`).
+- Build and IPA packaging require **macOS + Xcode** (or a Mac CI runner). This repo was scaffolded on Windows; source is ready to open in Xcode on a Mac.
+
+
+Architecture
+------------
+
+```
+WiFiHistory/
+├── WiFiHistory.xcodeproj/     Xcode project (iOS 12.0 deployment target)
+├── WiFiHistory/
+│   ├── AppDelegate.*          App entry, UIWindow + navigation shell
+│   ├── Controllers/
+│   │   └── NetworkListViewController.*   UITableView history list
+│   ├── Models/
+│   │   └── WiFiNetworkRecord.*             SSID, password, dates, security
+│   ├── Services/
+│   │   └── WiFiHistoryManager.*            Merges plist + keychain data
+│   ├── Info.plist
+│   └── LaunchScreen.storyboard
+├── WiFiHistory/entitlements.plist   Jailbreak entitlements for keychain access
+└── scripts/
+    └── build-ipa.sh           Archive + ldid + zip IPA
+```
+
+Data flow:
+
+1. **WiFiHistoryManager** reads known-networks plist from (first existing path):
+   - `/private/var/preferences/SystemConfiguration/com.apple.wifi.known-networks.plist`
+   - `/var/preferences/SystemConfiguration/com.apple.wifi.known-networks.plist`
+   - `/Library/Preferences/SystemConfiguration/com.apple.wifi.known-networks.plist`
+2. Parses each entry for SSID, `LastConnected` (CF absolute time → `NSDate`), and security metadata.
+3. Queries keychain via **Security.framework** / `SecItemCopyMatching`:
+   - Class: `kSecClassGenericPassword`
+   - Service: `AirPort`
+   - Access groups tried: `apple`, `com.apple.identities`, `lockdown-identities`, then ungrouped fallback
+4. Merges plist + keychain records by SSID.
+5. Sorts by `lastConnected` descending; **NetworkListViewController** renders the table.
+
+
+Implementation plan
+-----------------
+
+### Phase 1 — Scaffold (done)
+
+- [x] Objective-C UIKit app targeting iOS 12.0 (no Swift runtime dependency issues on old devices).
+- [x] Model, manager, and table UI for network history.
+- [x] Keychain + plist reader implementation.
+- [x] Jailbreak `entitlements.plist`.
+- [x] `build-ipa.sh` script (xcodebuild archive → ldid entitlements → zip Payload).
+
+### Phase 2 — Build (no Mac required)
+
+1. Push this repo to GitHub (`main` branch).
+2. GitHub Actions workflow `.github/workflows/build-ipa.yml` runs on `macos-14`.
+3. Download `WiFiHistory-ipa` artifact from the Actions run.
+4. Alternative (if you have a Mac): open Xcode and run `./WiFiHistory/scripts/build-ipa.sh`.
+
+### Phase 3 — Sign & install on jailbroken iOS 12
+
+1. Transfer `WiFiHistory.ipa` to the device.
+2. Install via **ReProvision** (or Filza + app installer / similar).
+3. If passwords are missing, re-sign the binary with ldid on-device:
+   ```
+   ldid -S entitlements.plist /path/to/WiFiHistory.app/WiFiHistory
+   ```
+4. Launch app; pull to refresh or tap Refresh. Networks should populate with passwords.
+
+### Phase 4 — Validation & hardening
+
+- [ ] Test on physical iOS 12 device with unc0ver, Chimera, and checkra1n (if hardware supports).
+- [ ] Verify plist path/format differences across 12.0–12.5.x.
+- [ ] Handle edge cases: hidden SSIDs, enterprise networks, empty passwords, open networks.
+- [ ] Add copy-to-clipboard on row tap (quality-of-life).
+- [ ] Add search/filter bar for large network lists.
+- [ ] Confirm behavior on newer jailbroken iOS (13+) without regressing iOS 12.
+
+
+ReProvision / sideload notes
+----------------------------
+
+- ReProvision re-signs IPAs with your Apple ID developer certificate on a 7-day cycle (jailbreak workflow).
+- Entitlements baked into the binary matter more than the provisioning profile for keychain group `apple`.
+- `entitlements.plist` includes:
+  - `keychain-access-groups`: `apple` + app group
+  - `com.apple.private.security.no-container`
+  - `platform-application`
+- These are **private entitlements**; they only work in a jailbreak context with ldid/ReProvision tolerance.
+
+
+Success criteria
+----------------
+
+| Criterion | Target |
+|-----------|--------|
+| Minimum iOS | 12.0 |
+| Jailbreak required | Yes |
+| Shows network history | Yes, sorted by last connected |
+| Shows passwords | Yes, when keychain query succeeds |
+| Output format | `.ipa` |
+| Install method | ReProvision / jailbreak sideload |
+
+
+Risks & mitigations
+-------------------
+
+| Risk | Mitigation |
+|------|------------|
+| Keychain returns no passwords without `apple` access group | ldid-sign with `entitlements.plist`; try multiple access groups |
+| Plist path/keys differ on some iOS 12 builds | Probe multiple paths; tolerant parsing of SSID/date field names |
+| Apple ID signing strips private entitlements | Use ldid after xcodebuild (`build-ipa.sh` does this when ldid is present) |
+| Cannot build IPA on Windows | Document Mac/Xcode requirement; CI on macOS runner optional |
+
+
+Next action
+-----------
+
+Build on a Mac with Xcode, run `scripts/build-ipa.sh`, install the IPA on a jailbroken iOS 12 device, and verify passwords appear. Iterate on Phase 4 based on real device results.
