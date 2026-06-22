@@ -14,6 +14,8 @@
 		A10000010000000100000005 /* WiFiHistoryManager.m in Sources */ = {isa = PBXBuildFile; fileRef = A10000020000000100000005 /* WiFiHistoryManager.m */; };
 		A10000010000000100000006 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A10000020000000100000006 /* LaunchScreen.storyboard */; };
 		A10000010000000100000007 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000020000000100000007 /* Security.framework */; };
+		A10000010000000100000008 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000002000000010000000F /* UIKit.framework */; };
+		A10000010000000100000009 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000020000000100000010 /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +33,8 @@
 		A1000002000000010000000C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000002000000010000000D /* WiFiHistory.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WiFiHistory.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000002000000010000000E /* entitlements.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = entitlements.plist; sourceTree = "<group>"; };
+		A1000002000000010000000F /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		A10000020000000100000010 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +42,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000010000000100000009 /* Foundation.framework in Frameworks */,
+				A10000010000000100000008 /* UIKit.framework in Frameworks */,
 				A10000010000000100000007 /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -81,6 +87,8 @@
 		A10000040000000100000004 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				A10000020000000100000010 /* Foundation.framework */,
+				A1000002000000010000000F /* UIKit.framework */,
 				A10000020000000100000007 /* Security.framework */,
 			);
 			name = Frameworks;
